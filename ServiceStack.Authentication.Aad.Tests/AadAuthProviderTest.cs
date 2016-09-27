@@ -248,7 +248,8 @@ namespace ServiceStack.Authentication.Aad.Tests
                 var mockAuthService = MockAuthService(request);
                 using (new HttpResultsFilter
                 {
-                    StringResultFn = tokenRequest =>
+                    StringResultFn  = (tokenRequest, s) => 
+                    //StringResultFn = tokenRequest =>
                     {
                         // To redeem an authorization code and get an access token,
                         // send an HTTP POST request to a common or tenant-specific Azure AD Authorization endpoint.
@@ -280,7 +281,7 @@ namespace ServiceStack.Authentication.Aad.Tests
                     var response = Subject.Authenticate(mockAuthService.Object, session, new Authenticate());
 
                     session.IsAuthenticated.Should().BeTrue();
-                    var tokens = session.GetOAuthTokens("aad");
+                    var tokens = session.GetAuthTokens("aad");
                     tokens.Provider.Should().Be("aad");
                     tokens.AccessTokenSecret.Should().Be("eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6Ik5HVEZ2ZEstZnl0aEV1THdqcHdBSk9NOW4tQSJ9.eyJhdWQiOiJodHRwczovL3NlcnZpY2UuY29udG9zby5jb20vIiwiaXNzIjoiaHR0cHM6Ly9zdHMud2luZG93cy5uZXQvN2ZlODE0NDctZGE1Ny00Mzg1LWJlY2ItNmRlNTdmMjE0NzdlLyIsImlhdCI6MTM4ODQ0MDg2MywibmJmIjoxMzg4NDQwODYzLCJleHAiOjEzODg0NDQ3NjMsInZlciI6IjEuMCIsInRpZCI6IjdmZTgxNDQ3LWRhNTctNDM4NS1iZWNiLTZkZTU3ZjIxNDc3ZSIsIm9pZCI6IjY4Mzg5YWUyLTYyZmEtNGIxOC05MWZlLTUzZGQxMDlkNzRmNSIsInVwbiI6ImZyYW5rbUBjb250b3NvLmNvbSIsInVuaXF1ZV9uYW1lIjoiZnJhbmttQGNvbnRvc28uY29tIiwic3ViIjoiZGVOcUlqOUlPRTlQV0pXYkhzZnRYdDJFYWJQVmwwQ2o4UUFtZWZSTFY5OCIsImZhbWlseV9uYW1lIjoiTWlsbGVyIiwiZ2l2ZW5fbmFtZSI6IkZyYW5rIiwiYXBwaWQiOiIyZDRkMTFhMi1mODE0LTQ2YTctODkwYS0yNzRhNzJhNzMwOWUiLCJhcHBpZGFjciI6IjAiLCJzY3AiOiJ1c2VyX2ltcGVyc29uYXRpb24iLCJhY3IiOiIxIn0.JZw8jC0gptZxVC-7l5sFkdnJgP3_tRjeQEPgUn28XctVe3QqmheLZw7QVZDPCyGycDWBaqy7FLpSekET_BftDkewRhyHk9FW_KeEz0ch2c3i08NGNDbr6XYGVayNuSesYk5Aw_p3ICRlUV1bqEwk-Jkzs9EEkQg4hbefqJS6yS1HoV_2EsEhpd_wCQpxK89WPs3hLYZETRJtG5kvCCEOvSHXmDE6eTHGTnEgsIk--UlPe275Dvou4gEAwLofhLDQbMSjnlV5VLsjimNBVcSRFShoxmQwBJR_b2011Y5IuD6St5zPnzruBbZYkGNurQK63TJPWmRd3mbJsGM0mf3CUQ");
                     tokens.RefreshTokenExpiry.Should().Be(DateTime.Parse("Mon, 30 Dec 2013 23:06:03 GMT").ToUniversalTime());
@@ -397,7 +398,7 @@ namespace ServiceStack.Authentication.Aad.Tests
                 var mockAuthService = MockAuthService(request);
                 using (new HttpResultsFilter
                 {
-                    StringResultFn = tokenRequest =>
+                    StringResultFn = (tokenRequest, s) =>
                     {
                         Assert.Fail("Should never have made token request since the state was not matched");
                         return @"{
@@ -446,7 +447,7 @@ namespace ServiceStack.Authentication.Aad.Tests
 
                     Subject.Authenticate(mockAuthService.Object, session, new Authenticate());
 
-                    var tokens = session.GetOAuthTokens("aad");
+                    var tokens = session.GetAuthTokens("aad");
                     var items = tokens.Items;
                     items["token_type"].Should().Be("Bearer");
                     items["iss"].Should().Be("https://sts.windows.net/7fe81447-da57-4385-becb-6de57f21477e/");
@@ -455,7 +456,7 @@ namespace ServiceStack.Authentication.Aad.Tests
             }
         }
 
-        private static Mock<IServiceBase> MockAuthService(MockHttpRequest request = null)
+        internal static Mock<IServiceBase> MockAuthService(MockHttpRequest request = null)
         {
             request = request ?? new MockHttpRequest();
             var mockAuthService = new Mock<IServiceBase>();
@@ -463,7 +464,7 @@ namespace ServiceStack.Authentication.Aad.Tests
             return mockAuthService;
         }
 
-        private static IDisposable TestAppHost()
+        internal static IDisposable TestAppHost()
         {
             // TODO: Do I really need to create an apphost so that it won't die trying to get the base URL?
             return new BasicAppHost(typeof(Service).Assembly).Init();

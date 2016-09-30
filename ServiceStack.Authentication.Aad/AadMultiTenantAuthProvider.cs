@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using ServiceStack.Auth;
 using ServiceStack.Configuration;
+using ServiceStack.Web;
 
 namespace ServiceStack.Authentication.Aad
 {
@@ -19,6 +21,12 @@ namespace ServiceStack.Authentication.Aad
         {
         }
 
+        public override IHttpResult OnAuthenticated(IServiceBase authService, IAuthSession session, IAuthTokens tokens, Dictionary<string, string> authInfo)
+        {
+            var z = 2;
+            return base.OnAuthenticated(authService, session, tokens, authInfo);
+        }
+
         public override object Authenticate(IServiceBase authService, IAuthSession session, Authenticate request)
         {
             var directoryRepository = authService.TryResolve<IDirectoryRepository>();
@@ -27,7 +35,7 @@ namespace ServiceStack.Authentication.Aad
                     $"{nameof(IDirectoryRepository)} was not registered in the container.");
 
             var directory = ParseDomainFromUserName(request);
-            var config = directoryRepository.GetDirectoryFromDomain(directory);
+            var config = directoryRepository.GetDirectoryByTenantName(directory);
             if (config == null)
                 throw new UnauthorizedAccessException($"Directory not found: {directory}");
 
@@ -35,16 +43,19 @@ namespace ServiceStack.Authentication.Aad
             {
                 TenantId = config.TenantId,
                 DomainHint = config.DomainHint,
-                Provider = Name
+                Provider = Name                
             };
-
+            
             var authTokens = new AuthTokens
             {
                 UserName = request.UserName,
                 Provider = Name
             };
+            authTokens.Items.Add("tenant_id", config.TenantId);
+            authTokens.Items.Add("aad_client_id", config.ClientId);
             session.ProviderOAuthAccess.Add(authTokens);
-            return aadProvider.Authenticate(authService, session, request);
+            var authenticated = aadProvider.Authenticate(authService, session, request);
+            return authenticated;
         }
 
         private static string ParseDomainFromUserName(Authenticate request)

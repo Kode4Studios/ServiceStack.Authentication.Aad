@@ -3,7 +3,8 @@
     public interface IDirectoryRepository
     {
         bool DirectoryIsRegistered(string directoryDomain);
-        DirectoryRegistration GetDirectoryFromDomain(string domain);
+        DirectoryRegistration GetDirectoryByTenantName(string domain);
+        DirectoryRegistration GetDirectoryByTenantId(string tenantId);
         DirectoryRegistration RegisterDirectory(DirectoryRegistration registration);
 
         DirectoryRegistration RegisterDirectory(string clientId, string clientSecret, string tenantId,

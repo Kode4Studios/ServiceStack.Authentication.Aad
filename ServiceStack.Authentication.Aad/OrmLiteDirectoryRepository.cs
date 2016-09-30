@@ -22,7 +22,7 @@ namespace ServiceStack.Authentication.Aad
             }
         }
 
-        public DirectoryRegistration GetDirectoryFromDomain(string domain)
+        public DirectoryRegistration GetDirectoryByTenantName(string domain)
         {
             if (string.IsNullOrWhiteSpace(domain))
                 return null;
@@ -31,6 +31,17 @@ namespace ServiceStack.Authentication.Aad
             using (var db = _connectionFactory.OpenDbConnection())
             {
                 return db.Single<DirectoryRegistration>(d => d.DirectoryDomain == loweredDomain);
+            }
+        }
+
+        public DirectoryRegistration GetDirectoryByTenantId(string tenantId)
+        {
+            if (string.IsNullOrWhiteSpace(tenantId))
+                return null;
+            
+            using (var db = _connectionFactory.OpenDbConnection())
+            {
+                return db.Single<DirectoryRegistration>(d => d.TenantId == tenantId);
             }
         }
 

@@ -47,7 +47,7 @@ namespace ServiceStack.Authentication.Aad.Tests
         [Test]
         public void ShouldNotFindDirectory()
         {
-            Assert.IsNull(_repository.GetDirectoryFromDomain(Directory1.DirectoryDomain));
+            Assert.IsNull(_repository.GetDirectoryByTenantName(Directory1.DirectoryDomain));
         }
 
         [Test]
@@ -55,7 +55,7 @@ namespace ServiceStack.Authentication.Aad.Tests
         {
             var inserted = _repository.RegisterDirectory(Directory2);
 
-            var result = _repository.GetDirectoryFromDomain(Directory2.DirectoryDomain);
+            var result = _repository.GetDirectoryByTenantName(Directory2.DirectoryDomain);
 
             Assert.IsNotNull(result);
             Assert.AreNotSame(inserted.DirectoryDomain, result.DirectoryDomain);

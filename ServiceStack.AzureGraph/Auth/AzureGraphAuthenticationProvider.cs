@@ -38,7 +38,12 @@ namespace ServiceStack.AzureGraph.Auth
         public AzureGraphAuthenticationProvider(IAppSettings settings)
             : base(settings, MsGraph.Realm, MsGraph.ProviderName, "ClientId", "ClientSecret")
         {
+            RegisterProviderService(ServiceStackHost.Instance);
+        }
 
+        private static void RegisterProviderService(IAppHost host)
+        {
+            host.RegisterService(typeof(GraphAuthService));
         }
 
         public TimeSpan RefreshTokenLifespan { get; set; } = TimeSpan.FromDays(13.9);
@@ -233,13 +238,39 @@ namespace ServiceStack.AzureGraph.Auth
             return userName.Substring(idx + 1);
         }
 
+        public override object Logout(IServiceBase service, Authenticate request)
+        {
+            var redirect = RedirectToMicrosoftLogout(service);
+            var baseLogout = base.Logout(service, request);
+            return redirect ?? baseLogout;
+        }
+
+        public IHttpResult RedirectToMicrosoftLogout(IServiceBase authService)
+        {
+            var tokens = authService.GetSession()
+                .ProviderOAuthAccess.SingleOrDefault(a => a.Provider == MsGraph.ProviderName);
+
+            var clientId = tokens?.Items["ClientId"];
+            if (string.IsNullOrWhiteSpace(clientId))
+                return null;
+
+            // See https://msdn.microsoft.com/en-us/office/office365/howto/authentication-v2-protocols
+            var request = MsGraph.AuthorizationUrl + "/logout?client_id={0}&post_logout_redirect_uri={1}"
+                .Fmt(clientId, "http://www.google.com");
+            return authService.Redirect(LogoutUrlFilter(this, request));
+        }
+
         public override IHttpResult OnAuthenticated(IServiceBase authService, IAuthSession session, IAuthTokens tokens,
             Dictionary<string, string> authInfo)
         {
             try
             {
-                var me = "https://graph.microsoft.com/v1.0/me".GetStringFromUrl(accept: "application/json",
-                    requestFilter: req => req.AddBearerToken(authInfo["access_token"]));
+                var accessToken = authInfo["access_token"];
+                var me = "https://graph.microsoft.com/v1.0/me".GetStringFromUrl(
+                    requestFilter: req =>
+                    {
+                        req.AddBearerToken(accessToken);
+                    });
 
                 var meInfo = JsonObject.Parse(me);
                 var meInfoNvc = meInfo.ToNameValueCollection();
@@ -248,8 +279,11 @@ namespace ServiceStack.AzureGraph.Auth
                 tokens.Email = meInfoNvc["mail"];
                 tokens.Language = meInfoNvc["preferredLanguage"];
                 tokens.PhoneNumber = meInfoNvc["mobilePhone"];
+
+                var groups = GraphHelper.GetMemberGroups(accessToken);
+                tokens.Items["security-groups"] = (string) groups;
             }
-            catch
+            catch(Exception ex)
             {
                 // No user profile related scope
             }

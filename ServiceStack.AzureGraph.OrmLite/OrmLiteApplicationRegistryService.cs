@@ -88,6 +88,10 @@ namespace ServiceStack.AzureGraph.OrmLite
 
         public void InitSchema()
         {
+            using (var db = _connectionFactory.OpenDbConnection())
+            {
+                db.CreateTableIfNotExists<ApplicationRegistration>();
+            }
         }
     }
 }
